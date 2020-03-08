@@ -16,9 +16,7 @@ void naive_openmp(int **mat, int mat_length, int num_threads)
 				mat[j][i] = temp; 
 			}
 		}
-
 	}
-	
 }
 
 void main(int argc, char* argv[])
@@ -44,10 +42,9 @@ void main(int argc, char* argv[])
 		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
 	populate(mat,mat_length);
-	//printMat(mat,mat_length);
+	printMat(mat,mat_length);
 	naive_openmp(mat,mat_length,num_threads);
-	//printf("\n");
-	//printMat(mat,mat_length);
+	printMat(mat,mat_length);
 
 	for (int index = 0; index < mat_length; index++)
 		free(mat[index]);

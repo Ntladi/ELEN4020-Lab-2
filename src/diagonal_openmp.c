@@ -3,7 +3,6 @@
 #include <omp.h>
 #include "commonFunctions.h"
 
-
 void diagonalOpenMP(int **mat, int mat_length, int num_threads)
 {
 	#pragma omp parallel for
