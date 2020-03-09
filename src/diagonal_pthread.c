@@ -1,173 +1,88 @@
-#include <stdio.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
+#include <stdio.h>
 #include <pthread.h>
+#include "commonFunctions.h"
 
-#define NUM_THREADS  4
+int thread_id = 0;
+pthread_mutex_t lock;
 
-pthread_mutex_t mutexLU;
-int matrix_size = 9;
-int next_pos = 1;
+struct data {
+	int **mat;
+	int mat_length;
+	int num_threads;
+	int thread_id;
+};
 
-typedef struct DataStore{
-    int index;
-    int t_id;
-    int *matrix_A;
-    int size;
+void diagonal_pthreads(int **mat, int mat_length, int num_threads);
+void* diagonal_pointer(void *input);
 
-} DataStore;
-
-void *allocate_2D(void *input){
-
-    struct DataStore *datastore = (struct DataStore *)input;
-
-    int n = datastore->size;
-    int nSquare = n*n;
-    datastore->matrix_A = malloc(nSquare * sizeof(int *));
-
-    for (int i = 0; i < nSquare; ++i)
-    {
-        datastore->matrix_A[i] = rand()%(n+1);
-    }
-
-    // free(matrix_A);
-
-}
-
-
-void *myprint2D(void *input)
+void main(int argc, char* argv[])
 {
-    struct DataStore *datastore = (struct DataStore *)input;
+	int num_threads;
+	int mat_length;
+	int **mat;
 
-    int *mat = datastore->matrix_A;
-    int length = datastore->size;
+	if(argc == 3)
+	{
+		num_threads = atoi(argv[1]);
+		mat_length = atoi(argv[2]);
+	}
+	else
+	{
+		printf("Invalid run arguments\n");
+		return;
+	}
 
-    printf(" PrintingMatrix,%d\n", datastore->size);
+	mat = (int **)malloc(mat_length * sizeof(int *));
 
-    for (int index = 1; index <= length*length; index++)
-    {
-        printf("%d ", mat[index-1]);
+	for(int index = 0; index < mat_length; index ++)
+		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
-        if (index%length == 0)
-            printf(" \n");
-    }
+	populate(mat,mat_length);
+	//printMat(mat, mat_length);
+	//printf("\n");
+	diagonal_pthreads(mat,mat_length,num_threads);
+	//printMat(mat,mat_length);
 
-    // printf("\n");
+	for (int index = 0; index < mat_length; index ++)
+		free(mat[index]);
 
-    // printf(" PrintingMatrixDone\n");
-    // printf(" \n");
+	free(mat);
 }
 
-
-void *transpose(void *args){
-
-    struct DataStore* struct_ptr =(struct DataStore *) args;
-    int position;
-    int *matrix_A = struct_ptr->matrix_A;
-
-    while(position < matrix_size){
-
-        position = struct_ptr->index;
-        for (int i = position; i < matrix_size; i++) {
-            for (int j = position+1; j < matrix_size; j++) {
-
-
-                int k1 = i*matrix_size + j;
-                int k2 = j*matrix_size + i;
-
-                long int temp;
-                int *Row = matrix_A + k1;
-                int *Col = matrix_A + k2;
-
-                temp = *Row;
-                *Row = *Col;
-                *Col = temp;
-                
-            }
-
-            break;
-        }
-
-        pthread_mutex_lock(&mutexLU);
-
-        int n = next_pos++;
-        struct_ptr->index = n;
-
-        pthread_mutex_unlock(&mutexLU);
-
-    }
-}
-
-
-void printTimeTaken(struct timeval start, struct timeval end)
+void diagonal_pthreads(int **mat, int mat_length, int num_threads)
 {
-    double time_taken = (end.tv_sec - start.tv_sec) * 1e6;
-    time_taken = (time_taken + (end.tv_usec -  start.tv_usec)) * 1e-6;
-    printf(" = %8f \n", time_taken);
+	pthread_t threads[num_threads];
 
+	struct data values;
+	values.mat = mat;
+	values.mat_length = mat_length;
+	values.num_threads = num_threads;
+
+	for(int index = 0; index < num_threads; index ++)
+		pthread_create(&threads[index], NULL, diagonal_pointer, &values);
+
+	for(int index = 0; index < num_threads; index ++)
+		pthread_join(threads[index], NULL);
 }
 
+void* diagonal_pointer(void *input)
+{
 
+	struct data values = *((struct data*) input);
 
-void *pthreadOperation(void *input){
-    next_pos = NUM_THREADS;
+	pthread_mutex_lock(&lock);
+	values.thread_id = thread_id;
+	thread_id++;
+	pthread_mutex_unlock(&lock);
 
-    struct DataStore *datastore = (struct datastore *) input;
+	for(int row = values.thread_id; row < values.mat_length; row+=values.num_threads)
+		for (int col = row+1; col < values.mat_length; col++)
+		{
+			int temp = values.mat[row][col];
+			values.mat[row][col] = values.mat[col][row];
+			values.mat[col][row] = temp;
+		}
 
-    int N = datastore->size;
-    struct timeval start, end;
-
-    pthread_t threads[N];
-    struct DataStore args[NUM_THREADS];
-
-    gettimeofday(&start, NULL);
-
-    for(int i=0;i<NUM_THREADS;i++){
-        args[i].index = i;
-        args[i].matrix_A = datastore->matrix_A;
-        args[i].size = datastore->size;
-
-        pthread_create(&threads[i],NULL, transpose,(void*) &args); 
-
-    }
-
-    for(int i=0;i<NUM_THREADS;i++){
-        pthread_join(threads[i],NULL);
-
-    }
-
-    gettimeofday(&end, NULL);
-    printTimeTaken(start, end);
-
-
-}
-int main() {
-
-    printf("<<<<<<< DIAGONAL PTHREAD >>>>>>>\n");
-
-    srand(time(0));
-    int totalMatSize = 4;
-    int Sizes[4] = {128, 1024, 2048, 4096};
-
-    for (int i = 0; i < totalMatSize; ++i)
-    {
-        matrix_size = Sizes[i];
-        DataStore *datastore = malloc(sizeof(DataStore * ));
-
-        datastore->size = matrix_size;
-
-        allocate_2D(datastore);
-        // myprint2D(datastore);
-
-        printf("Size [%d] ", Sizes[i]);
-        pthreadOperation(datastore);
-        // myprint2D(datastore);
-
-    }
-
-    // free(matrix);
-
-    exit(0);
+	pthread_exit(0);
 }

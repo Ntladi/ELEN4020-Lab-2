@@ -49,8 +49,10 @@ void main(int argc, char* argv[])
 		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
 	populate(mat,mat_length);
+	//printMat(mat, mat_length);
+	//printf("\n");
 	block_openmp(mat,mat_length,num_threads, block_length);
-	printMat(mat, mat_length);
+	//printMat(mat, mat_length);
 
 	for (int index = 0; index < mat_length; index++)
 		free(mat[index]);

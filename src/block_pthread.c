@@ -1,185 +1,170 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <stdlib.h>
-#include <time.h>
-#include <pthread.h>
-#include <math.h>
 #include "commonFunctions.h"
-#define NUMBER_OF_THREADS 4
-#define N 16
-#define NUMBER_OF_BLOCKS 16
 
-struct coord{
- int x,y;
+pthread_barrier_t barr;
+int thread_id = 0;
+pthread_mutex_t lock;
 
+struct data {
+	int **mat;
+	int mat_length;
+	int num_threads;
+	int block_length;
+	int thread_id;
 };
 
+void block_pthreads(int **mat, int mat_length, int num_threads, int block_length);
+void* block_pointer(void *input);
+void swap_elements(int **mat, int max_tiles_length, int max_tiles, int tile_d, int num_threads, int thread_id);
+void swap_tiles(int **mat, int max_tiles_length, int tile_d, int num_threads, int thread_id);
+void edge_cases(int **mat, int mat_length, int tile_d, int num_threads, int thread_id);
 
+void* block_pointer(void *input)
+{
 
-int **mat;
+	struct data values = *((struct data*) input);
 
+	pthread_mutex_lock(&lock);
+	values.thread_id = thread_id;
+	thread_id++;
+	pthread_mutex_unlock(&lock);
 
-int block_size(){ 
+	int max_tiles_length = (values.mat_length / values.block_length);
+	int max_tiles = max_tiles_length * max_tiles_length;
 
-return sqrt((N*N)/NUMBER_OF_BLOCKS);}
+	swap_elements(values.mat, max_tiles_length, max_tiles, values.block_length, values.num_threads, values.thread_id);
+	pthread_barrier_wait(&barr);
+	swap_tiles(values.mat, max_tiles_length, values.block_length, values.num_threads, values.thread_id);
+	edge_cases(values.mat, values.mat_length, values.block_length, values.num_threads, values.thread_id);
 
-void swaping(int*a, int*b);
-void* transpose_each_block(void*param);
-void* swap_blocks(void*param);
-void block_pthread();
+	pthread_exit(0);
+	
+}
 
+void block_pthreads(int **mat, int mat_length, int num_threads, int block_length)
+{
+	int index;
+	struct data values;
+	values.mat = mat;
+	values.mat_length = mat_length;
+	values.num_threads = num_threads;
+	values.block_length = block_length;
 
-int main(void){
+	pthread_t threads[num_threads];
+	pthread_barrier_init(&barr, NULL, num_threads);
+	
+	for(int index = 0; index < num_threads; index ++)
+		pthread_create(&threads[index], NULL, block_pointer, &values);
 
-mat = (int **)malloc(N * sizeof(int *));
+	for(int index = 0; index < num_threads; index ++)
+		pthread_join(threads[index], NULL);
+}
 
-	for(int index = 0; index < N; index++)
-		mat[index] = (int *)malloc(N * sizeof(int));
+void main(int argc, char* argv[])
+{
+	int num_threads;
+	int mat_length;
+	int block_length;
+	int **mat;
 
+	if(argc == 4)
+	{
+		num_threads = atoi(argv[1]);
+		mat_length = atoi(argv[2]);
+		block_length = atoi(argv[3]);
+	}
+	else
+	{
+		printf("Invalid run arguments\n");
+		return;
+	}
 
+	mat = (int **)malloc(mat_length * sizeof(int *));
 
-populate(mat,N);
-printMat(mat,N);
-printf("\n");
+	for(int index = 0; index < mat_length; index++)
+		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
-block_pthread();
+	populate(mat,mat_length);
+	//printMat(mat, mat_length);
+	//printf("\n");
+	block_pthreads(mat, mat_length, num_threads, block_length);
+	//printMat(mat, mat_length);
 
-printMat(mat,N);
-
-for (int index = 0; index < N; index++)
+	for (int index = 0; index < mat_length; index++)
 		free(mat[index]);
 
 	free(mat);
-
-
 }
 
 
+void swap_elements(int **mat, int max_tiles_length, int max_tiles, int tile_d, int num_threads, int thread_id)
+{
+	for(int tile = thread_id; tile < max_tiles; tile+=num_threads)
+	{
+		int row_start = (tile / max_tiles_length) * tile_d;
+		int col_start = (tile % max_tiles_length) * tile_d;
+		int row_end = row_start + tile_d;
+		int col_end = col_start + tile_d;
 
+		for(int row = row_start, col_offset = 1; row < row_end; row++, col_offset++)
+			for(int col = col_start + col_offset, index_offset = 1; col < col_end; col++, index_offset++)
+			{
+				int temp = mat[row][col];
+				mat[row][col] = mat[row + index_offset][col - index_offset];
+				mat[row + index_offset][col - index_offset] = temp;
+			}
+	}
+}
 
-void swaping(int*a, int*b){
+void swap_tiles(int **mat, int max_tiles_length, int tile_d, int num_threads, int thread_id)
+{
 
+	for(int tile1 = thread_id; tile1 < max_tiles_length; tile1+=num_threads)
+		for(int tile2 = tile1+1; tile2 < max_tiles_length; tile2++)	
+		{
+			int row_start_1 = tile1 * tile_d;
+			int col_start_1 = (tile2 % max_tiles_length) * tile_d;
+			int row_start_2 = col_start_1;
+			int col_start_2 = row_start_1;
 
-	int temp = *a;
-	*a = *b;
-	*b = temp;
+			int row_end = row_start_1 + tile_d;
+			int col_end = col_start_1 + tile_d;
+
+			for(int row1 = row_start_1, row2 = row_start_2; row1 < row_end; row1++, row2++)	
+				for(int col1 = col_start_1, col2 = col_start_2; col1 < col_end; col1++, col2++)
+				{
+					int temp = mat[row1][col1];
+					mat[row1][col1] = mat[row2][col2];
+					mat[row2][col2] = temp;
+				}	
+		}
 	
 }
 
-
-
-
-void* transpose_each_block(void*param){
-
-	struct coord *par = (struct coord*) param;
-	int p = par->x;
-	int q = par->y;
-	int i,j;
-	int y,z;
-	for(i=p,j = q; i <(p+block_size()-1)&&j<(q+block_size()-1);i++,j++){
-		for(y = i+1,z=j+1; y<(p+block_size())&&z<(q+block_size()); y++,z++){
-
-		swaping(&mat[y][j], &mat[i][z]);
+void edge_cases(int **mat, int mat_length, int tile_d, int num_threads, int thread_id)
+{
+	if(mat_length % tile_d != 0)
+	{
 		
+		int edge = (mat_length - mat_length%tile_d);
+		for(int row = edge + thread_id; row < mat_length; row+=num_threads)
+			for(int col = 0; col < mat_length; col++)
+			{
+				int temp = mat[row][col];
+				mat[row][col] = mat[col][row];
+				mat[col][row] = temp;
+			}
 
-}
-}
+		for(int row = edge + thread_id; row < mat_length; row +=num_threads)
+			for(int col = edge; col < row; col++)
+			{
+				int temp = mat[row][col];
+				mat[row][col] = mat[col][row];
+				mat[col][row] = temp;				
+			}
 
-
-}
-
-
-
-void* swap_blocks(void*param){
-
-	struct coord *par = (struct coord*) param;
-	int p = par->x;
-	int q = par->y;
-
-	for(int row = 0; row<block_size();row++){
-		for(int cols = 0; cols<block_size(); cols++){
-
-		swaping(&mat[row+p][cols+q], &mat[row+q][cols+p]);
-		
-
-}
-}
-
-}
-
-
-
-
-
-
-
-
-
-
-void block_pthread(){
-
-	
-int count = 0;
-struct coord pt[N][N];
-pthread_t threads[NUMBER_OF_THREADS];
-
-for(int i = 0; i<=(N-block_size()); i+=block_size()){
-		for(int j=0; j<=(N-block_size()); j+=(block_size())){
-
-			pt[i][j].x = i;
-			pt[i][j].y =j;
-			pthread_create(&threads[count], NULL, transpose_each_block,(void*) &pt[i][j]);
-			count++;
-			
-
-			if(count==NUMBER_OF_THREADS){		
-			for(int k=0; k<count; k++){
-			pthread_join(threads[k],NULL);
-}
-			count = 0;
-}
-	
-}
-			
-}
-
-	if(count!=0)
-	for(int k=0; k<count; k++){
-			pthread_join(threads[k],NULL);
-}
-
-
-
-count = 0;
-
-for(int i=0;i<=(N-2*block_size());i+=block_size()){
-
-
-	for(int j = i+block_size(); j<=(N-block_size());j+=block_size()){
-
-			pt[i][j].x = i;
-			pt[i][j].y =j;
-
-			pthread_create(&threads[count], NULL, swap_blocks,(void*) &pt[i][j]);
-			count++;
-
-	
-			if(count==NUMBER_OF_THREADS){		
-			for(int k=0; k<count; k++){
-			pthread_join(threads[k],NULL);
-}
-			count = 0;
-}
-
-}
-}
-
-
-	if(count!=0)
-	for(int k=0; k<count; k++){
-			pthread_join(threads[k],NULL);
-}
-
-
+	}
 
 }

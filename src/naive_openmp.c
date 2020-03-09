@@ -46,7 +46,7 @@ void main(int argc, char* argv[])
 	//printMat(mat,mat_length);
 	//printf("\n");
 	naive_openmp(mat,mat_length,num_threads);
-	printMat(mat,mat_length);
+	//printMat(mat,mat_length);
 
 	for (int index = 0; index < mat_length; index++)
 		free(mat[index]);
