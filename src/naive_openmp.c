@@ -5,6 +5,7 @@
 
 void naive_openmp(int **mat, int mat_length, int num_threads)
 {
+	omp_set_num_threads(num_threads);
 	#pragma omp parallel
 	{
 		for (int i = 0; i < mat_length; ++i)
@@ -42,7 +43,6 @@ void main(int argc, char* argv[])
 		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
 	populate(mat,mat_length);
-	printMat(mat,mat_length);
 	naive_openmp(mat,mat_length,num_threads);
 	printMat(mat,mat_length);
 

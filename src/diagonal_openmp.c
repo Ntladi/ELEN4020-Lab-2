@@ -3,21 +3,7 @@
 #include <omp.h>
 #include "commonFunctions.h"
 
-void diagonalOpenMP(int **mat, int mat_length, int num_threads)
-{
-	#pragma omp parallel for
-	{
-		for (int i = 0; i < mat_length; ++i)
-		{
-			for (int j = i; j < mat_length; ++j)
-			{
-				int temp = mat[i][j];
-				mat[i][j] = mat[j][i];
-				mat[j][i] = temp; 
-			}
-		}
-	}
-}
+void diagonalOpenMP(int **mat, int mat_length, int num_threads);
 
 void main(int argc, char* argv[])
 {
@@ -42,12 +28,29 @@ void main(int argc, char* argv[])
 		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
 	populate(mat,mat_length);
-	printMat(mat, mat_length);
-	diagonalOpenMP(mat, mat_length);
+	diagonalOpenMP(mat, mat_length, num_threads);
 	printMat(mat, mat_length);
 
 	for (int index = 0; index < mat_length; index++)
 		free(mat[index]);
 
 	free(mat);
+}
+
+void diagonalOpenMP(int **mat, int mat_length, int num_threads)
+{
+
+	omp_set_num_threads(num_threads);
+	#pragma omp parallel
+	{
+		#pragma omp for
+		for(int row = 0; row < mat_length; row ++)
+			for (int col = row+1; col < mat_length; col++)
+			{
+
+				int temp = mat[row][col];
+				mat[row][col] = mat[col][row];
+				mat[col][row] = temp;
+			}
+	}
 }

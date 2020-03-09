@@ -33,11 +33,9 @@ void* block_pointer(void *input)
 
 	int max_tiles_length = (values.mat_length / values.block_length);
 	int max_tiles = max_tiles_length * max_tiles_length;
-	
-	printf("Thread %d is swapping \n", values.thread_id);
+
 	swap_elements(values.mat, max_tiles_length, max_tiles, values.block_length, values.num_threads, values.thread_id);
 	pthread_barrier_wait(&barr);
-	printf("Thread %d is done swapping\n", values.thread_id);
 	swap_tiles(values.mat, max_tiles_length, values.block_length, values.num_threads, values.thread_id);
 	edge_cases(values.mat, values.mat_length, values.block_length, values.num_threads, values.thread_id);
 
@@ -58,10 +56,7 @@ void block_pthreads(int **mat, int mat_length, int num_threads, int block_length
 	pthread_barrier_init(&barr, NULL, num_threads);
 	
 	for(int index = 0; index < num_threads; index ++)
-	{
-		values.thread_id = index;
 		pthread_create(&threads[index], NULL, block_pointer, &values);
-	}
 
 	for(int index = 0; index < num_threads; index ++)
 		pthread_join(threads[index], NULL);
@@ -92,8 +87,6 @@ void main(int argc, char* argv[])
 		mat[index] = (int *)malloc(mat_length * sizeof(int));
 
 	populate(mat,mat_length);
-	printMat(mat, mat_length);
-	printf("\n");
 	block_pthreads(mat, mat_length, num_threads, block_length);
 	printMat(mat, mat_length);
 

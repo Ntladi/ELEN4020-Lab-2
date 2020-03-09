@@ -45,7 +45,7 @@ void main(int argc, char* argv[])
 
 	populate(mat,mat_length);
 	block_openmp(mat,mat_length,num_threads, block_length);
-	//printMat(mat, mat_length);
+	printMat(mat, mat_length);
 
 	for (int index = 0; index < mat_length; index++)
 		free(mat[index]);
@@ -125,7 +125,6 @@ void edge_cases(int **mat, int mat_length, int tile_d, int num_threads)
 					mat[col][row] = temp;
 				}
 
-			#pragma omp for
 			for(int row = edge; row < mat_length; row ++)
 				for(int col = edge; col < row; col++)
 				{
