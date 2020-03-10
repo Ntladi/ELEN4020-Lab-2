@@ -15,6 +15,10 @@ Once compiled, the executable files can be found in the **executables** folder.
 The MakeFile can also be found in the **executables** folder
 Miscilanious scripts used to run the algorithm are found in the **scripts** folder.
 
+In order to run and time the executable that uses the serial implementation, run the following command:
+
+**time ./serial {matrix size}**
+
 In order to run and time each of the executables that use the block implementation, run the following command:
 
 **time ./{executable name} {number of threads} {matrix size} {block size}**

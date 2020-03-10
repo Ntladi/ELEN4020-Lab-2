@@ -1,4 +1,7 @@
-all: openmp_naive openmp_block openmp_diagonal pthread_block pthread_diagonal
+all: serial openmp_naive openmp_block openmp_diagonal pthread_block pthread_diagonal
+
+serial: ../src/serial.c
+	gcc ../src/serial.c -o serial
 
 openmp_naive: ../src/naive_openmp.c
 	gcc ../src/naive_openmp.c -fopenmp -o openmp_naive
