@@ -17,14 +17,14 @@ Miscilanious scripts used to run the algorithm are found in the **scripts** fold
 
 In order to run and time each of the executables that use the block implementation, run the following command:
 
-time ./{executable name} {number of threads} {matrix size} {block size}
+**time ./{executable name} {number of threads} {matrix size} {block size}**
 
-_Example:_  time ./pthread_block 4 1024 8
+_Example:_  **time ./pthread_block 4 1024 8**
 
 In order to run and time each of the executables that use the diagonal implementation, run the following command:
 
-time ./{executable name} {number of threads} {matrix size}
+**time ./{executable name} {number of threads} {matrix size}**
 
-_Example:_  time ./openmp_diagonal 2 128
+_Example:_  **time ./openmp_diagonal 2 128**
 
 The results will be shown in the terminal window and the real time is what was recorded. 
